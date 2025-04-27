@@ -247,7 +247,7 @@ class WeeklyForecast{
         shortForecast: shortForecast,
         detailedForecast: detailedForecast
       ),
-      _ => throw const FormatException('Failed to load forecast.')
+      _ => throw const FormatException('Failed to load weekly forecast.')
     };
   }
 
@@ -265,8 +265,6 @@ class HourlyForecast{
   final String temperatureUnit;
   final String temperatureTrend;
   final Map<String, dynamic> probabilityOfPrecipitation;
-  final Map<String, dynamic> dewpoint;
-  final Map<String, dynamic> relativeHumudity;
   final String windSpeed;
   final String windDirection;
   final String icon;
@@ -283,8 +281,6 @@ class HourlyForecast{
     required this.temperatureUnit,
     required this.temperatureTrend,
     required this.probabilityOfPrecipitation,
-    required this.dewpoint,
-    required this.relativeHumudity,
     required this.windSpeed,
     required this.windDirection,
     required this.icon,
@@ -305,8 +301,6 @@ class HourlyForecast{
         'temperatureUnit': String temperatureUnit,
         'temperatureTrend' : String temperatureTrend,
         'probabilityOfPrecipitation' : Map<String, dynamic> probabilityOfPrecipitation,
-        'dewpoint' : Map<String, dynamic> dewpoint,
-        'relativeHumudity' : Map<String, dynamic> relativeHumudity,
         'windSpeed': String windSpeed,
         'windDirection': String windDirection,
         'icon' : String icon,
@@ -322,15 +316,13 @@ class HourlyForecast{
         temperatureUnit: temperatureUnit,
         temperatureTrend: temperatureTrend,
         probabilityOfPrecipitation: probabilityOfPrecipitation,
-        dewpoint: dewpoint,
-        relativeHumudity: relativeHumudity,
         windSpeed: windSpeed,
         windDirection: windDirection,
         icon: icon,
         shortForecast: shortForecast,
         detailedForecast: detailedForecast
       ),
-      _ => throw const FormatException('Failed to load forecast.')
+      _ => throw const FormatException('Failed to load hourly forecast.')
     };
   }
 
