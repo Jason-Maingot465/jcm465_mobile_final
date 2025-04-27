@@ -1,3 +1,6 @@
+import 'currentforecastscreen.dart';
+import 'weeklyforecastscreen.dart';
+import 'hourlyforecastscreen.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -136,13 +139,21 @@ Map<String, String> stations = {
   "las vegas": "VEF"
 };
 
-// Make network requests
-Future<WeeklyForecast> fetchWeeklyForeCast(String stationCode, int index) async {
+
+
+
+
+// Functions making network requests
+Future<List<WeeklyForecast>> fetchWeeklyForeCast(String stationCode, int howMany) async {
   final response = await http.get(
     Uri.parse('https://api.weather.gov/gridpoints/$stationCode/50,50/forecast')
   );
   if (response.statusCode == 200) {
-    return WeeklyForecast.fromJson(jsonDecode(response.body) as Map<String, dynamic>, index);
+    List<WeeklyForecast> ret = List.empty(growable: true);
+    for (int i = 0; i < howMany; i++) {
+      ret.add(WeeklyForecast.fromJson(jsonDecode(response.body) as Map<String, dynamic>, i));
+    }
+    return ret;
   } else {
     throw Exception('Failed to load weekly forecast');
   }
@@ -160,7 +171,10 @@ Future<HourlyForecast> fetchHourlyForeCast(String stationCode, int index) async 
 }
 
 
-// Class for 12 hour weekly forecasts
+
+
+
+// Class to hold data for 12-hour periods
 class WeeklyForecast{
 
   final int number;
@@ -235,7 +249,7 @@ class WeeklyForecast{
 
 }
 
-// Class for hourly forcast
+// Class to hold data for hourly periods
 class HourlyForecast{
   
   final int number;
@@ -318,12 +332,18 @@ class HourlyForecast{
 
 }
 
-// Starts app on run
+
+
+
+
+// Starts WeatherApp on run
 void main() {
   runApp(const WeatherApp());
 }
 
-// App starts on MyHomePage, with title of 'Weather App'
+
+
+// WeatherApp
 class WeatherApp extends StatelessWidget {
   const WeatherApp({super.key});
   // This widget is the root of your application.
@@ -336,6 +356,10 @@ class WeatherApp extends StatelessWidget {
   }
 }
 
+
+
+
+
 // Home page
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
@@ -343,6 +367,8 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
+
+// Home page state: gets city and looks up correct abreviation for URL for network requests
 class _MyHomePageState extends State<MyHomePage> {
   String cityInput = "";
   String errorText = "";
@@ -350,10 +376,12 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // App bar
       appBar: AppBar(
         title: Text("Weather App"),
         backgroundColor: Colors.deepOrange,
       ),
+      // Body
       body: Center(
         child: Column(
           children: [
@@ -364,14 +392,15 @@ class _MyHomePageState extends State<MyHomePage> {
                 cityInput = value;
               },
             ),
+            // Button to submit city name, and either give error or move to next page with relavent data
             TextButton(
               onPressed: () => {
                 setState(() {
-                  if (cityInput == "") { // If input is empty
+                  if (cityInput == "") { // If input is empty ask for input
                     errorText = "Please Enter The Name of Your City";
-                  } else if (!stations.containsKey(cityInput.toLowerCase())) { // If map doesn't contain city
+                  } else if (!stations.containsKey(cityInput.toLowerCase())) { // If map doesn't contain city ask to check spelling or try different city
                     errorText = "$cityInput is not on our list of cities. Please check spelling and try again. If spelling is correct, please try another city near you.";
-                  } else { // Map does contain city entered, go onto next page
+                  } else { // Map does contain city entered, go onto next page with station abreviation for URL
                     Navigator.push(context, MaterialPageRoute(builder: (context) =>
                       ForecastPage(stationCode: stations[cityInput.toLowerCase()]!),
                     ));
@@ -380,6 +409,7 @@ class _MyHomePageState extends State<MyHomePage> {
               }, 
               child: Text("Check Weather")
             ),
+            // Shows error text if there is any
             Text("$errorText")
           ],
         ),
@@ -388,47 +418,77 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 }
 
+
+
+
+
 // Page that shows all of the forcasts
 class ForecastPage extends StatefulWidget {
+
   final String stationCode;
+  
   const ForecastPage({Key? key, required this.stationCode}) : super(key: key);
   @override
   State<ForecastPage> createState() => _ForecastPageState();
 }
 
+// Forecast page state
 class _ForecastPageState extends State<ForecastPage> {
-  late Future<WeeklyForecast> futureWeeklyForecast;
+  // index of which tab user is on
+  int currentIndex = 0;
+
+  // Lists of weekly and hourly forecast from NWS API
+  late Future<List<WeeklyForecast>> futureWeeklyForecasts;
   late Future<HourlyForecast> futureHourlyForecast;
 
+  // Gets forecast lists on initialize
   @override
   void initState() {
     super.initState();
-    futureWeeklyForecast = fetchWeeklyForeCast(widget.stationCode, 0);
+    futureWeeklyForecasts = fetchWeeklyForeCast(widget.stationCode, 1);
     futureHourlyForecast = fetchHourlyForeCast(widget.stationCode, 0);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: FutureBuilder(
-          future: futureWeeklyForecast, 
-          builder: (context, snapshot) {
-            if (snapshot.hasData) {
-              return Column(
-                children: [
-                  Image.network(snapshot.data!.icon),
-                  Text("Temperature: " + snapshot.data!.temperature.toString() + " " + snapshot.data!.temperatureUnit),
-                  Text("Wind: " + snapshot.data!.windSpeed + " " + snapshot.data!.windDirection),
-                  Text("Forecast: " + snapshot.data!.shortForecast)
-                ],
-              );
-            } else if (snapshot.hasError) {
-              return Text('${snapshot.error}');
-            }
-            return const CircularProgressIndicator();
+      // Uses future builder in case future widget variable hasn't been given a value yet
+      body: FutureBuilder(
+        future: futureWeeklyForecasts, 
+        builder: (context, snapshot) {
+          if (snapshot.hasData) {
+            return <Widget>[
+              CurrentForecastScreen(),
+              HourlyForecastScreen(),
+              WeeklyForecastScreen()
+            ][currentIndex];
+          } else if (snapshot.hasError) {
+            return Text('${snapshot.error}');
           }
-        ),
+          return const CircularProgressIndicator();
+        }
+      ),
+      bottomNavigationBar: NavigationBar(
+        onDestinationSelected: (int index) {
+          setState(() {
+            currentIndex = index;
+          });
+        },
+        destinations: <Widget>[
+          NavigationDestination(
+            icon: Icon(Icons.wb_cloudy_outlined), 
+            label: "Current Weather"
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.timer_outlined), 
+            label: "Hourly Forecast"
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.calendar_month_outlined), 
+            label: "Weekly Forecast"
+          ),
+        ],
+        selectedIndex: currentIndex,
       ),
     );
   }
