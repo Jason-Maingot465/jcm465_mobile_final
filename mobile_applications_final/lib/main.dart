@@ -159,12 +159,16 @@ Future<List<WeeklyForecast>> fetchWeeklyForeCast(String stationCode, int howMany
   }
 }
 
-Future<HourlyForecast> fetchHourlyForeCast(String stationCode, int index) async {
+Future<List<HourlyForecast>> fetchHourlyForeCast(String stationCode, int howMany) async {
   final response = await http.get(
     Uri.parse('https://api.weather.gov/gridpoints/$stationCode/50,50/forecast/hourly')
   );
   if (response.statusCode == 200) {
-    return HourlyForecast.fromJson(jsonDecode(response.body) as Map<String, dynamic>, index);
+    List<HourlyForecast> ret = List.empty(growable: true);
+    for (int i = 0; i < howMany; i++) {
+      ret.add(HourlyForecast.fromJson(jsonDecode(response.body) as Map<String, dynamic>, i));
+    }
+    return ret;
   } else {
     throw Exception('Failed to load hourly forecast');
   }
@@ -439,35 +443,56 @@ class _ForecastPageState extends State<ForecastPage> {
 
   // Lists of weekly and hourly forecast from NWS API
   late Future<List<WeeklyForecast>> futureWeeklyForecasts;
-  late Future<HourlyForecast> futureHourlyForecast;
+  late Future<List<HourlyForecast>> futureHourlyForecasts;
 
   // Gets forecast lists on initialize
   @override
   void initState() {
     super.initState();
+    futureHourlyForecasts = fetchHourlyForeCast(widget.stationCode, 1);
     futureWeeklyForecasts = fetchWeeklyForeCast(widget.stationCode, 1);
-    futureHourlyForecast = fetchHourlyForeCast(widget.stationCode, 0);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       // Uses future builder in case future widget variable hasn't been given a value yet
-      body: FutureBuilder(
-        future: futureWeeklyForecasts, 
-        builder: (context, snapshot) {
-          if (snapshot.hasData) {
-            return <Widget>[
-              CurrentForecastScreen(),
-              HourlyForecastScreen(),
-              WeeklyForecastScreen()
-            ][currentIndex];
-          } else if (snapshot.hasError) {
-            return Text('${snapshot.error}');
+      body: <Widget>[
+        FutureBuilder(
+          future: futureHourlyForecasts, 
+          builder: (context, snapshot) {
+            if (snapshot.hasData) {
+              return CurrentForecastScreen();
+            } else if (snapshot.hasError) {
+              return Text('${snapshot.error}');
+            }
+            return const CircularProgressIndicator();
           }
-          return const CircularProgressIndicator();
-        }
-      ),
+        ),
+        FutureBuilder(
+          future: futureHourlyForecasts, 
+          builder: (context, snapshot) {
+            if (snapshot.hasData) {
+              return HourlyForecastScreen();
+            } else if (snapshot.hasError) {
+              return Text('${snapshot.error}');
+            }
+            return const CircularProgressIndicator();
+          }
+        ),
+        FutureBuilder(
+          future: futureWeeklyForecasts, 
+          builder: (context, snapshot) {
+            if (snapshot.hasData) {
+              return WeeklyForecastScreen();
+            } else if (snapshot.hasError) {
+              return Text('${snapshot.error}');
+            }
+            return const CircularProgressIndicator();
+          }
+        ),
+      ][currentIndex],
+      // Navigation bar for changing tabs
       bottomNavigationBar: NavigationBar(
         onDestinationSelected: (int index) {
           setState(() {
