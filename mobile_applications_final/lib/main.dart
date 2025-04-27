@@ -373,42 +373,64 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       // App bar
-      appBar: AppBar(
-        title: Text("Weather App"),
-        backgroundColor: Colors.deepOrange,
-      ),
+      // appBar: AppBar(
+      //   title: Text("Weather App"),
+      //   backgroundColor: Colors.deepOrange,
+      // ),
       // Body
       body: Center(
-        child: Column(
-          children: [
-            // Text field to get city name, store input in 'cityInput' variable
-            TextField(
-              decoration: InputDecoration(labelText: "Enter City:"),
-              onChanged: (String value) {
-                cityInput = value;
-              },
+        child: Container(
+          color: Color.fromRGBO(100, 181, 246, 1),
+          child: Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Title
+                Container(
+                  child: Text("Jason's Weather App", style: TextStyle(fontSize: 48, color: Colors.black), textAlign: TextAlign.center)
+                ),
+                SizedBox(height: 48),
+                // Text field to get city name, store input in 'cityInput' variable
+                Padding(
+                  padding: EdgeInsetsDirectional.symmetric(horizontal: 64),
+                  child: TextField(
+                    decoration: InputDecoration(labelText: "Enter City:"),
+                    onChanged: (String value) {
+                      cityInput = value;
+                    },
+                  ),
+                ),
+                // Button to submit city name, and either give error or move to next page with relavent data
+                SizedBox(height: 48),
+                TextButton(
+                  onPressed: () => {
+                    setState(() {
+                      if (cityInput == "") { // If input is empty ask for input
+                        errorText = "Please Enter The Name of Your City";
+                      } else if (!stations.containsKey(cityInput.toLowerCase())) { // If map doesn't contain city ask to check spelling or try different city
+                        errorText = "$cityInput is not on our list of cities. Please check spelling and try again. If spelling is correct, please try another city near you.";
+                      } else { // Map does contain city entered, go onto next page with station abreviation for URL
+                        Navigator.push(context, MaterialPageRoute(builder: (context) =>
+                          ForecastPage(cityInput: cityInput),
+                        ));
+                      }
+                    })
+                  }, 
+                  child: Container(
+                    decoration: BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(50)), color: Color.fromRGBO(23, 43, 62, .90)),
+                    padding: EdgeInsets.all(16),
+                    child: Text("Check Weather", style: TextStyle(color: Colors.white),),
+                  )
+                ),
+                // Shows error text if there is any
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 64),
+                  child: Text("$errorText", style: TextStyle(color: Colors.red),)
+                )
+              ],
             ),
-            // Button to submit city name, and either give error or move to next page with relavent data
-            TextButton(
-              onPressed: () => {
-                setState(() {
-                  if (cityInput == "") { // If input is empty ask for input
-                    errorText = "Please Enter The Name of Your City";
-                  } else if (!stations.containsKey(cityInput.toLowerCase())) { // If map doesn't contain city ask to check spelling or try different city
-                    errorText = "$cityInput is not on our list of cities. Please check spelling and try again. If spelling is correct, please try another city near you.";
-                  } else { // Map does contain city entered, go onto next page with station abreviation for URL
-                    Navigator.push(context, MaterialPageRoute(builder: (context) =>
-                      ForecastPage(stationCode: stations[cityInput.toLowerCase()]!),
-                    ));
-                  }
-                })
-              }, 
-              child: Text("Check Weather")
-            ),
-            // Shows error text if there is any
-            Text("$errorText")
-          ],
-        ),
+          )
+        )
       ),
     );
   }
@@ -421,9 +443,9 @@ class _MyHomePageState extends State<MyHomePage> {
 // Page that shows all of the forcasts
 class ForecastPage extends StatefulWidget {
 
-  final String stationCode;
+  final String cityInput;
   
-  const ForecastPage({Key? key, required this.stationCode}) : super(key: key);
+  const ForecastPage({Key? key, required this.cityInput}) : super(key: key);
   @override
   State<ForecastPage> createState() => _ForecastPageState();
 }
@@ -441,8 +463,8 @@ class _ForecastPageState extends State<ForecastPage> {
   @override
   void initState() {
     super.initState();
-    futureHourlyForecasts = fetchHourlyForeCast(widget.stationCode, 1);
-    futureWeeklyForecasts = fetchWeeklyForeCast(widget.stationCode, 1);
+    futureHourlyForecasts = fetchHourlyForeCast(stations[widget.cityInput.toLowerCase()]!, 24);
+    futureWeeklyForecasts = fetchWeeklyForeCast(stations[widget.cityInput.toLowerCase()]!, 14);
   }
 
   @override
@@ -454,7 +476,7 @@ class _ForecastPageState extends State<ForecastPage> {
           future: futureHourlyForecasts, 
           builder: (context, snapshot) {
             if (snapshot.hasData) {
-              return CurrentForecastScreen();
+              return CurrentForecastScreen(widget.cityInput, snapshot.data![0]);
             } else if (snapshot.hasError) {
               return Text('${snapshot.error}');
             }
@@ -465,7 +487,7 @@ class _ForecastPageState extends State<ForecastPage> {
           future: futureHourlyForecasts, 
           builder: (context, snapshot) {
             if (snapshot.hasData) {
-              return HourlyForecastScreen();
+              return HourlyForecastScreen(widget.cityInput, snapshot.data!);
             } else if (snapshot.hasError) {
               return Text('${snapshot.error}');
             }
@@ -476,7 +498,7 @@ class _ForecastPageState extends State<ForecastPage> {
           future: futureWeeklyForecasts, 
           builder: (context, snapshot) {
             if (snapshot.hasData) {
-              return WeeklyForecastScreen();
+              return WeeklyForecastScreen(widget.cityInput, snapshot.data!);
             } else if (snapshot.hasError) {
               return Text('${snapshot.error}');
             }
